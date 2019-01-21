@@ -127,34 +127,23 @@ namespace Affinity_propagation {
             }
         }
 
-        private static double calcAij(int i, int k) {
-            double sumMax = 0;
-            for (int j = 0; j < edgesIn[k].Length; j++) {
-                if (edgesIn[k][j].id != k && edgesIn[k][j].id != i || edgesIn[k][j].id == k) {
-                    sumMax += Math.Max(0, edgesIn[k][j].R);
-                }
-            }
-            return 0 > sumMax ? 0 : sumMax;
-        }
-
-        private static double calcAii(int i) {
-            double sumMax = 0;
-            for (int j = 1; j < edgesIn[i].Length; j++) {
-                sumMax += Math.Max(0, edgesIn[i][j].R);
-            }
-            return sumMax;
-        }
-
         private static void updateA(double damping) {
-            for (int i = 0; i < nodesN; i++) {                
-                for (int j = 1; j < edgesOut[i].Length; j++) {
-                    edgesOut[i][j].A *= (1 - damping);
-                    edgesOut[i][j].A += calcAij(i, edgesOut[i][j].id) * damping;
-                    edgesOut[i][j].invEdge.A = edgesOut[i][j].A;
+            for (int k = 0; k < nodesN; k++) {
+                double sumRki = 0;
+                for (int j = 1; j < edgesIn[k].Length; j++)
+                    sumRki += Math.Max(0, edgesIn[k][j].R); 
+
+                for (int i = 1; i < edgesIn[k].Length; i++) {
+                    double sum = edgesIn[k][0].R + sumRki - 
+                        Math.Max(0, edgesIn[k][i].R);
+                    double Aki = 0 > sum ? 0 : sum;
+                    edgesIn[k][i].A *= (1 - damping);
+                    edgesIn[k][i].A += Aki * damping;
+                    edgesIn[k][i].invEdge.A = edgesIn[k][i].A;
                 }
-                edgesOut[i][0].A *= (1 - damping);
-                edgesOut[i][0].A += calcAii(i) * damping;
-                edgesOut[i][0].invEdge.A = edgesOut[i][0].A;
+                edgesIn[k][0].A *= (1 - damping);
+                edgesIn[k][0].A += sumRki * damping;
+                edgesIn[k][0].invEdge.A = edgesIn[k][0].A;
             }
         }
 
@@ -171,15 +160,6 @@ namespace Affinity_propagation {
                 }
                 exemplars[i] = maxInd;
 
-                if (clusterWidth.ContainsKey(exemplars[i]))
-                    clusterWidth[exemplars[i]]++;
-                else
-                    clusterWidth.Add(exemplars[i], 1);
-            }
-        } 
-
-        private static void getClusterWidth() {
-            for (int i = 0; i < exemplars.Length; i++) {
                 if (clusterWidth.ContainsKey(exemplars[i]))
                     clusterWidth[exemplars[i]]++;
                 else
@@ -204,17 +184,13 @@ namespace Affinity_propagation {
 
         private static void saveExemplars() {
             string FileName = "Gowalla_Exemplars_" + DateTime.Now.ToString("yyyy MM dd HH mm ss") + ".txt";
-            try
-            {
-                using (StreamWriter sw = new StreamWriter(FileName))
-                {
+            try {
+                using (StreamWriter sw = new StreamWriter(FileName)) {
                     for (int i = 0; i < exemplars.Length; i++)
                         sw.WriteLine(exemplars[i]);
                 }
                 Console.WriteLine("Examplars data saved");
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 Console.WriteLine("The file {0} could not be write:", FileName);
                 Console.WriteLine(e.Message);
                 Console.WriteLine("Or another problem :)");
